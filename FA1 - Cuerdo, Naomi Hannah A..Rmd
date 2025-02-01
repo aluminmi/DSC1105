@@ -1,0 +1,87 @@
+---
+title: "FA1 - Cuerdo, Naomi Hannah A."
+author: "Cuerdo, Naomi Hannah A."
+date: "2025-01-27"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r libraries, include=FALSE}
+library(ggplot2)
+```
+
+```{r csv file}
+data <-read.csv("C:/Users/naomi/Downloads/cytof_one_experiment.csv")
+
+str(data)
+
+```
+
+2.  Choose one of the columns of the dataset and make at least two plots showing its distribution (choose from ECDF, quantile, histogram, density estimate). What does the plot tell you about the distribution of the values in that column?
+
+## Histogram
+
+```{r histogram}
+column <- "NKp30"
+ggplot(data, aes(x = get(column))) + geom_histogram(binwidth = 0.2, fill = "purple", color = "black") +
+  labs(title = paste("Histogram of", column), x = column, y = "Frequency")
+
+```
+
+The histogram above shows the distribution of the column NKp30. The data shows a roughly symmetric and bell-shaped pattern, which suggests a near-normal distribution. Most of the values are concentrated around 4, with the range extending from approximately 0 to 8. This indicates that the majority of observations cluster in the middle, with fewer occurrences at the extremes. The histogram provides an initial understanding of the spread and the central tendency of the NKp30 values in the data set.
+
+## Density Plot
+
+```{r density plot}
+
+ggplot(data, aes(x = get(column))) + geom_density(fill = "red", alpha = 0.5) + labs(title = paste("Density of", column), x = column, y = "Frequency")
+
+```
+
+The Density Plot above shows the distribution of the NKp30. This figure confirms that the values are concentrated around 4, where the density reaches it peak, indicating the most frequent values. The distribution appears to be unimodal, with a single prominent peak, and a gradual tapering towards the lower and higher ends. The density plot provides a more clearer view of the data's distribution compared to the histogram, suggesting a continuous nature and a near-normal distribution.
+
+
+3. Choose any two of the columns of the data set and make a Q-Q plot comparing the distributions. What does the Q-Q plot tell you about similarities or differences between the distributions of the values in the two columns?
+
+## Q-Q Plot
+
+```{r qq plot}
+column1 <- "NKp30"
+column2 <- "CD4"
+
+qqplot <- ggplot(data, aes(sample = get(column1))) + stat_qq(aes(sample = get(column2))) + stat_qq_line() + labs(title = paste("Q-Q Plot:", column1, "vs", column2), x = column1, y = column2)
+
+print(qqplot)
+
+```
+
+The Q-Q Plot above compares the distributions of two data sets: NKp30 (x-axis) and CD4 (y-axis). The points differ significantly from the diagonal reference line, indicating that the distributions of NKp30 and CD4 differ in shape. The curve present above suggests that CD4 values are more heavily skewed compared to NKp30.The deviation at the ends show that the extreme values differ between the two data sets: CD4 has heavier tails, especially in the positive direction. The non-linear pattern suggests one data set may not be symmetric, which may be CD4, possibly having a positive skew.
+
+Overall, the distributions of NKp30 and CD4 differ substantially in shape and tail behavior, indicating that they do not follow the same underlying distribution.
+
+## APA Report
+
+This report examines the distribution of the NKp30 column in a CyTOF data set through graphical representations. These report provides insights into the nature of the data distribution and its potential implication.
+
+The data was imported into R for analysis. The NKp30 was selected, and both a histogram and a density plot were generated to visualize its distribution, and a Q-Q plot was created to compare the distributions of NKp30 and CD4.
+
+### Results
+
+**Histogram of NKp30**
+
+The histogram displays the frequency distribution of the values in the NKp30 value. The shape is approximately bell-shaped, which suggests a near-normal distribution. Most of the values are concentrated around 4, with the range extending from approximately 0 to 8. This indicates that the majority of observations cluster in the middle, with fewer occurrences at the extremes.
+
+**Density Plot of NKp30**
+
+The density plot provides a smooth representation of the NKp30 valies. The peak density occurs around 4, which appears to be unimodal but slightly skewed, with a minor secondary peak at 0, suggesting a subset of values distinct from the main distribution. 
+
+**Quantile-Quantile (Q-Q) Plot**
+
+A Q-Q plot was generated to compare the distributions of NKp30 and CD4 columns. The plot indicates whether the two columns have a similar distribution. Results show that the points align closely to the diagonal line, indicating that they have comparable distributions. However, deviations at the ends imply differences in the extreme values, suggesting variations in their distributions. 
+
+
+
+
