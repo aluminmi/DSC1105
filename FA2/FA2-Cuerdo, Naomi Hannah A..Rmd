@@ -1,0 +1,79 @@
+---
+title: "FA2 - Cuerdo, Naomi Hannah A."
+author: "Cuerdo, Naomi Hannah A."
+date: "2025-02-12"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r libraries, include=FALSE}
+library(ggplot2)
+library(tidyverse)
+library(dcldata)
+
+
+```
+
+```{r}
+data <-read.csv("C:/Users/naomi/Downloads/cytof_one_experiment.csv")
+data(example_gymnastics_2)
+str(data)
+```
+
+**1. Use pivot_longer to reshape the dataset into one that has two columns, the first giving the protein identity and the second giving the amount of the protein in one of the cells. The dataset you get should have 1750000 rows (50000 cells in the original dataset times 35 proteins).**
+
+```{r pivot_longer}
+cytof_long <- data %>%
+  pivot_longer(cols = everything(), names_to = "Protein", values_to = "Amount")
+
+dim(cytof_long)
+
+```
+
+From the code above, it shows that the dataset has already reshaped into 1,750,000 rows.
+
+
+
+**2. Use group_by and summarise to find the median protein level and the median absolute deviation of the protein level for each marker. (Use the R functions median and mad).**
+
+```{r median and MAD}
+protein_summary <- cytof_long %>%
+  group_by(Protein) %>%
+  summarise(
+    Median = median(Amount, na.rm = TRUE),
+    MAD = mad(Amount, na.rm = TRUE)
+  )
+protein_summary
+```
+
+
+**3. Make a plot with mad on the x-axis and median on the y-axis. This is known as a spread location (s-l) plot. What does it tell you about the relationship betwen the median and the mad?**
+
+```{r S-L Plot}
+ggplot(protein_summary, aes(x = MAD, y = Median)) +
+  geom_point() + theme_minimal() + 
+  labs(title = "Spread-Location Plot",
+       x = "Median Absolute Deviation (MAD)",
+       y = "Median Protein Level")
+
+```
+
+The **Spread-Location (S-L) Plot** visualizes the relationship between the **median protein expression levels** and **median absolute deviation (MAD)** across different proteins.
+
+The plot shows a **partial positive correlation**, which means that proteins with higher median expression often have higher variability. Some proteins remain **low in both median and MAD**, while others have **low median but moderate MAD**, indicating fluctuations. A few outliers exist on the graph. 
+
+**4. Using either pivot_longer on its own or pivot_longer in combination with separate, reshape the dataset so that it has columns for country, event, year, and score.**
+
+```{r reshape example_gymnastics_2}
+gymnastics_long <- example_gymnastics_2 %>%
+  pivot_longer(cols = -country, names_to = "event_year", values_to = "score") %>%
+  separate(event_year, into = c("event", "year"), sep = "_")
+
+gymnastics_long
+
+
+```
+
