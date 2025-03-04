@@ -1,0 +1,212 @@
+---
+title: "FA4_Cuerdo, Naomi Hannah A."
+author: "Cuerdo, Naomi Hannah A."
+date: "2025-03-01"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+# Mortality by Latitude
+
+```{r libraries, include = FALSE}
+library(tidyverse)
+
+```
+
+## 1 Import Data
+```{r data }
+
+data <- read.csv("C:/Users/naomi/Downloads/mortality_by_latitude.csv")
+
+data
+```
+
+## 1.1  Make a plot of mortality index against mean average temperature. 
+
+```{r mortality index plot }
+
+data %>% ggplot(
+  mapping = aes(
+    x = temperature, y = mortality_index
+  )
+) +
+geom_point() +
+  geom_smooth(
+    method = "lm", se = FALSE
+  ) + labs (
+    title = "Mortality Index vs Mean Average Temperature",
+    x = "Mean Average Temperature in Celcius",
+    y = "Mortality Index"
+  )
+
+```
+
+
+#### 1.1.1 Is it hollow up or hollow down?
+
+Based from the plot above, the blue line has a trend that is going upward. Hence, the relationship between the average temperature and mortality index hollows up. 
+
+
+#### 1.1.2 Transformation to Straighten Out the Relationship 
+
+
+```{r transformation}
+
+
+data %>% ggplot(
+  mapping = aes(
+    x = temperature, y = log(mortality_index)
+  )
+) +
+geom_point() +
+  geom_smooth(
+    method = "lm", se = FALSE
+  ) + labs (
+    title = "Mortality Index vs Mean Average Temperature",
+    x = "Mean Average Temperature in Celcius",
+    y = "Mortality Index"
+  )
+```
+
+#### Checking residual remains using log(mortality_index)
+
+```{r residuals}
+residuals <- resid(
+  lm(
+    log(
+      mortality_index
+    ) ~ temperature,
+    data = data
+  )
+)
+
+```
+
+##### Plotting the residuals
+
+```{r residuals plot}
+
+data %>% ggplot(
+  mapping = aes(
+    x = temperature, y = residuals
+  )
+) +
+geom_point() +
+  geom_hline(
+    yintercept = 0.00, linetype = "dashed"
+  ) + labs (
+    title = "Residuals of Log Mortality Index vs Mean Average Temperature",
+    x = "Average Temperature in Celcius",
+    y = "Residuals"
+  )
+```
+
+From the plot above, it shows that as the average temperature increases, the trend witht the mortality index became more fitting to the trend line, and the missing points are less evident. 
+
+
+# Diamond Dataset
+
+```{r diamonds dataset}
+data("diamonds")
+
+```
+
+### 2.1 Plot of Log Price as a Function of Carat with a Loess Smoother
+
+```{r}
+diamonds %>%
+  filter(carat <= 2.50
+    # Use the value `5.00` if none entries shall be filtered out
+  ) %>%
+  ggplot(
+    mapping = aes(
+      x = carat, y = log(price)
+    )
+  ) +
+  geom_point(
+    alpha = 0.3
+  ) +
+  geom_smooth(
+    method = "loess", span = 0.5, se = FALSE
+  ) +
+  labs(title = "Log Price vs Carat with Loess Smoother",
+       x = "Carat",
+       y = "Logarithmic Growth of Price")
+```
+
+### 2.2  Trying values for Span and Degree values
+```{r}
+diamonds %>%
+  filter(carat <= 2.50
+  ) %>%
+  ggplot(
+    mapping = aes(
+      x = carat, y = log(price)
+    )
+  ) +
+  geom_point(
+    alpha = 0.3
+  ) +
+  geom_smooth(
+    method = "loess", span = 0.5, se = FALSE, color = "blue"
+  ) +
+  geom_smooth(
+    method = "loess", span = 1.5, se = FALSE, color = "yellow"
+  ) +
+  geom_smooth(
+    method = "loess", span = 2.5, se = FALSE, color = "purple"
+  ) +
+  
+  labs(title = "Log Price vs Carat with Loss Smoother",
+       x = "Carat",
+       y = "Logarithmic Growth of Price")
+```
+
+From the plot, the blue curve with a span of 0.5 follows the data more closely, which can be useful for capturing detailed trends but it might overfit. The yellow span smooths out fluctuations, capturing the overall trend. The purple curve is too rigid and does not cover important variations.
+
+Thus, a span around **1.0 to 1.5*** is a good balance between capturing the trend and avoid overfitting.
+
+### 3.1 Comparing Loess Smoother to Polynomial and Step Function Regression
+
+#### 3.1.1 Polynomial + Step Function Regression
+
+```{r}
+diamonds_subset <- diamonds %>%
+  filter(carat <= 2.50)
+
+poly_model <- lm(log(price)~ poly(carat, 3) + cut, data = diamonds_subset)
+
+residuals_poly <- resid(poly_model)
+
+ggplot(diamonds_subset, aes(x = carat, y =residuals_poly)) +
+  geom_point(alpha = 0.4, color = "purple") +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "black") +
+  labs(title = "Residuals of Polynomial and Step Function Regression", 
+       x = "Carat",
+       y = "Residuals")
+  
+```
+
+
+#### 3.1.2 Plotting resdiuals for loess model
+
+```{r}
+loess_model <- loess(log(price) ~ carat, data = diamonds_subset, span = 0.5)
+
+residual_loess <- residuals(loess_model)
+
+ggplot(diamonds_subset, aes(x = carat, y = residual_loess)) +
+  geom_point(alpha = 0.3, color = "salmon") +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "blue") +
+  labs(title = "Residuals of Loess Model", 
+       x = "Carat",
+       y = "Residuals")
+```
+
+#### Which plot is more faithful?
+
+The 3.1.2 Residual of Loess Model is more faithful compared to the Residuals of Polynomial and Step Function Regression as it captures the non-linear trends better, and has smaller residuals. 
