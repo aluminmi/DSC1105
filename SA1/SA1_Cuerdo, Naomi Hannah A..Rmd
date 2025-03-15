@@ -1,0 +1,346 @@
+---
+title: "Summative Assessment 1"
+author: "Cuerdo, Naomi Hannah A."
+date: "2025-03-12"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Dataset: EDA_Ecommerce_Assessment.csv
+
+```{r libraries, include=FALSE}
+library(ggplot2)
+library(gridExtra)
+library(tidyverse)
+library(e1071)
+library(ggpmisc)
+library(lattice)
+library(lm.beta)
+library(MASS)
+```
+
+## Unit 1: Univariate Data Analysis
+
+### 1. Load the dataset and summarize its structure
+```{r load the dataset}
+df <- read.csv("C:/Users/naomi/Downloads/EDA_Ecommerce_Assessment.csv")
+
+```
+
+```{r dataset structure}
+str(df)
+
+```
+The dataset contains information about customer purchasing behavior in an e-commerce platform. The variables include:
+
+<span style="color: red; border: 2px solid red; border-radius: 10px; padding: 2px;">Customer_ID</span>
+
+<span style="color: red; border: 2px solid red; border-radius: 10px; padding: 2px;">Gender</span>
+
+<span style="color: red; border: 2px solid red; border-radius: 10px; padding: 2px;">Age</span>
+
+<span style="color: red; border: 2px solid red; border-radius: 10px; padding: 2px;">Browsing_Time</span>
+
+<span style="color: red; border: 2px solid red; border-radius: 10px; padding: 2px;">Purchase_Amount</span>
+
+<span style="color: red; border: 2px solid red; border-radius: 10px; padding: 2px;">Discount_Applied</span>
+
+<span style="color: red; border: 2px solid red; border-radius: 10px; padding: 2px;">Total_Transactions</span>
+
+<span style="color: red; border: 2px solid red; border-radius: 10px; padding: 2px;">Category</span>
+
+
+Here is the summary of the dataset:
+
+```{r summary}
+summary(df)
+
+```
+
+### 2.Create histograms and boxplots to visualize the distribution of Purchase_Amount, Number_of_Items, and Satisfaction_Score.
+
+```{r purchase amount}
+p1 <- ggplot(df, aes(x = Purchase_Amount)) + 
+  geom_histogram(bins = 30, fill = "blue", color ="black", alpha = 0.5) +
+  ggtitle("Histogram of\nPurchase\nAmount")
+
+p2 <- ggplot(df, aes(x = Number_of_Items)) + 
+  geom_histogram(bins = 8, fill = "red", color = "black", alpha = 0.5) +
+  ggtitle("Histogram of\nNumber of Items")
+
+p3 <- p3 <- ggplot(df, aes(x = Satisfaction_Score)) + 
+  geom_histogram(bins = 5, fill = "yellow", color = "black", alpha = 0.5) +
+  ggtitle("Histogram of \nSatisfaction Score")
+
+grid.arrange(p1, p2, p3, ncol = 3)
+
+```
+
+```{r box plots}
+
+b1 <- ggplot(df, aes(y = Purchase_Amount)) + 
+  geom_boxplot(fill = "blue", alpha = 0.5) +
+  ggtitle("Boxplot of \nPurchase Amount")
+
+b2 <- ggplot(df, aes(y = Number_of_Items)) + 
+  geom_boxplot(fill = "red", alpha = 0.5) +
+  ggtitle("Boxplot of\n Number of Items")
+
+b3 <- ggplot(df, aes(y = Satisfaction_Score)) + 
+  geom_boxplot(fill = "yellow", alpha = 0.5) +
+  ggtitle("Boxplot of\n Satisfaction Score")
+
+grid.arrange(b1, b2, b3, ncol = 3)
+
+```
+
+The histograms and boxplots show the distribution of **Purchase_Amount**, **Number_of_Items**, and **Satisfaction_Score**
+
+**Purchase_Amount** plots are right skewed, with some high-value purchases;
+**Number_of_Items** plots shows a right_skewed distribution with a few extreme values; while
+
+**Satisfaction_Score** plots are more discrete and follows a categorical rating scale. 
+
+
+### 3. Compute measures of central tendency (mean, median, mode) and spread (variance, standard deviation, IQR) for Purchase_Amount.
+
+```{r mean, median, and mode}
+
+mean(df$Purchase_Amount)
+median(df$Purchase_Amount)
+mode_value <- as.numeric(names(sort(table(df$Purchase_Amount), decreasing = TRUE)[1]))
+mode_value
+var(df$Purchase_Amount)
+sd(df$Purchase_Amount)
+IQR(df$Purchase_Amount)
+
+
+```
+The statistics above show the measures of central tendenct of **Purchase Amount.**
+
+**Mean:** 247.9625
+
+**Median:** 245.09, this is close to the mean, indicating moderate symmetry.
+
+**Mode:** 245.09, indicates the most frequent purchase amount.
+
+**Variance:** 19,845.09
+
+**Standard Deviation:** 140.88
+
+**Interquartile Range (IQR):** 238.51
+
+
+### 4. Compare the distribution of Browsing_Time and Purchase_Amount across different Gender groups using density plots.
+
+```{r density plot}
+d1 <- ggplot(df, aes(x = Browsing_Time, color = Gender, fill = Gender)) +
+  geom_density(alpha = 0.4) +
+  ggtitle("Density Plot of \nBrowsing Time by Gender")
+
+d2 <- ggplot(df, aes(x = Purchase_Amount, color = Gender, fill = Gender)) +
+  geom_density(alpha = 0.4) +
+  ggtitle("Density Plot of \nPurchase Amount by Gender")
+
+grid.arrange(d1, d2, ncol = 2)
+```
+
+
+The density plot shows the distribution of **Browsing_Time** and **Purchase_Amount by Gender**
+
+The density plot of the **Browsing_Time** and **Gender** shows that the distributions for males and females appear similar, with a slight difference in peaks.
+
+The density plot of the **Purchase_Amount** and **Gender** shows they have similar spending patterns, though minor variations exist with males having a higher peak than females. 
+
+
+### 5. Apply a logarithmic or square root transformation on Browsing_Time and evaluate changes in skewness.
+
+```{r logarithmic transformation}
+
+df <- df %>%
+  mutate(Log_Browsing_Time = log1p(Browsing_Time),
+         Sqrt_Browsing_Time = sqrt(Browsing_Time))
+
+skewness(df$Browsing_Time)
+skewness(df$Log_Browsing_Time)
+skewness(df$Sqrt_Browsing_Time)
+
+```
+Skewness values for **Browsing_Time**:
+
+Original: 0.0386
+
+The original value has a value of **0.03861558**, indicating that it is nearly symmetric.
+
+Log Transform: -1.219, indicating a left-skewed behavior.
+
+Square Root Transform: -0.477 indicating a mild left skew behavior. 
+
+The original **Browsing_Time** is already close to symmetric, so transformations may not be necessary. The log transformation over corrects the skew, while the square root transformation results in a slight left skew.
+
+
+### 6. Fit a simple linear regression model predicting Purchase_Amount based on Browsing_Time. Interpret the results.
+
+```{r simple linear regression}
+
+model <- lm(Purchase_Amount ~ Browsing_Time, data = df)
+summary(model)
+
+```
+**Interpretation:**
+
+The **Intercept is at 252.66**, which means when **Browsing_Time = 0**, the predicted **Purchase_Amount** is about **$252.66**.
+
+The **Browsing_Time Coefficient (-0.0784)** wherein a 1-minute increase in Browsing_Time is associated with a $0.0784 decrease in Purchase_Amount. However, the effect is **not statistically significant** (p = 0.296).
+
+The **R-squared is at 0.000**, which explains **0% of the variance in Purchase_Amount**, meaning **Browsing_Time is not a useful predictor**.
+
+This suggests that time spent browsing has no meaningful relationship with purchase amount.
+
+
+### 7. Use ggplot2 (or equivalent) to create scatter plots and regression lines.
+```{r scatter plots and regression lines}
+ggplot(df, aes(x = Browsing_Time, y = Purchase_Amount)) +
+  geom_point(alpha = 0.5) +
+  geom_smooth(method = "lm", color = "red") +
+  ggtitle("Scatter Plot of Purchase Amount vs Browsing Time")
+```
+
+The scatter plot with a regression line confirms that **Browsing_Time has no strong relationship with Purchase_Amount.** The data points are widely scattered, and the regression line is nearly flat.
+
+## Unit 2: Bivariate Data Analysis
+
+### 8. Create scatter plots to explore the relationship between Purchase_Amount and Number_of_Items.
+
+```{r scatter plot}
+ggplot(df, aes(x = Number_of_Items, y = Purchase_Amount)) +
+  geom_point(alpha = 0.5) +
+  geom_smooth(method = "lm", color = "red") +
+  ggtitle("Scatter Plot: Purchase Amount vs. Number of Items")
+
+```
+The scatter plot of **Purchase_Amount vs. Number_of_Items** confirms that a positive correlation exists, however there is variability, meaning some customers buy fewer expensive items while others buy many cheap ones. 
+
+
+### 9. Fit a polynomial regression model for Purchase_Amount and Browsing_Time and compare it with a simple linear model.
+
+```{r poly regression}
+poly_model <- lm(Purchase_Amount ~ Browsing_Time, data = df)
+summary(poly_model)
+
+```
+```{r simple linear regression model}
+lin_model <- lm(Purchase_Amount ~ Browsing_Time, data = df)
+summary(lin_model)
+
+```
+
+```{r scatter plot with polynomial regression line}
+ggplot(df, aes(x = Browsing_Time, y = Purchase_Amount)) +
+  geom_point(alpha = 0.5) +
+  geom_smooth(method = "lm", formula = y ~ poly(x, 2, raw = TRUE), color = "blue") +
+  ggtitle("Polynomial Regression: Purchase Amount vs. Browsing Time")
+
+```
+
+Comparing the two models, **the quadratic model fits better than a simple linear model.** There also appears to be a peak browsing time beyond which spending declines. This means that more browsing does not always mean higher spending amount.
+
+
+### 10. Apply LOESS (Locally Estimated Scatterplot Smoothing) to Purchase_Amount vs. Browsing_Time and visualize the results.
+
+```{r}
+ggplot(df, aes(x = Browsing_Time, y = Purchase_Amount)) +
+  geom_point(alpha = 0.5) +
+  geom_smooth(method = "loess", color = "purple") +
+  ggtitle("LOESS Smoothing: Purchase Amount vs. Browsing Time")
+
+```
+The LOESS curve captures **nonlinear patterns** that polynomial regression may miss. Spending initially increases with Browsing_Time but flattens or declines after a certain point. Spending initially increases with **Browsing_Time** but flattens or declines after a certain point.
+
+
+### 11. Compare robust regression methods (Huber or Tukey regression) with ordinary least squares (OLS).
+```{r robust regression}
+
+huber_model <- rlm(Purchase_Amount ~ Browsing_Time, data = df) 
+summary(huber_model)
+
+```
+
+```{r scatter plot comparing OLS and robust regression}
+
+ggplot(df, aes(x = Browsing_Time, y = Purchase_Amount)) +
+  geom_point(alpha = 0.5) +
+  geom_smooth(method = "lm", color = "red", se = FALSE, linetype = "dashed") +  # OLS
+  geom_smooth(method = "loess", color = "blue", se = FALSE) +  # LOESS
+  ggtitle("Comparison: OLS vs LOESS Regression")
+
+
+```
+
+OLS is senstive to outliers, which can distort coefficient estimates. On the other hand, Huber and Tukey regression reduce the impact of extreme values, giving more stable estimates. Overall, Robust regression better handles outliers, making it preferable for noisy ecommerce data.
+
+
+### 12. Explore interaction effects between Browsing_Time and Category on Purchase_Amount using interaction plots.
+
+```{r interaction effects }
+ggplot(df, aes(x = Browsing_Time, y = Purchase_Amount, color = Category)) +
+  geom_point(alpha = 0.5) +
+  geom_smooth(method = "lm", se = FALSE) +
+  ggtitle("Interaction Effect: Browsing Time × Category on Purchase Amount")
+
+```
+
+From the plot, different product categories show varying effects of browsing time on spending. Some categories see higher spending after prolonged browsing, while others remain stable. From the plot, it seems that clothing and electronics have higher browsing time and spending.
+
+
+### 13. Create coplots of Purchase_Amount against Browsing_Time for different levels of Category.
+
+
+```{r}
+coplot(Purchase_Amount ~ Browsing_Time | Category, data = df, 
+       panel = panel.smooth, col = "blue")
+
+```
+
+From the plot, certain categories drive more purchases after longer browsing times. Some product types have quick decision-making patterns. Overall, Customer behavior varies by category. for example,**electronics may have longer browsing times than books**.
+
+
+### 14. Perform multiple regression with Purchase_Amount as the dependent variable and Browsing_Time, Number_of_Items, and Satisfaction_Score as predictors. Perform model selection and assess variable importance.
+
+```{r multiple regression}
+ggplot(df, aes(x = Browsing_Time, y = Number_of_Items, fill = Purchase_Amount)) +
+  geom_tile() +
+  scale_fill_gradient(low = "blue", high = "red") +
+  ggtitle("Level Plot: Browsing Time & Number of Items vs. Purchase Amount")
+```
+
+```{r contour plot}
+ggplot(df, aes(x = Browsing_Time, y = Number_of_Items, z = Purchase_Amount)) +
+  geom_density_2d_filled() +
+  ggtitle("Smoothed Contour Plot: Browsing Time & Number of Items vs. Purchase Amount")
+
+
+```
+
+From both plots, we can see rhat purchase_amount increases in specific regions of Browsing_Time and Number_of_Items. However, the contour plot failed to give us sufficient analysis, which indicates that **binning methods or heatmaps** are better for visualizing relationships.
+
+
+### 15. Perform multiple regression with Purchase_Amount as the dependent variable and Browsing_Time, Number_of_Items, and Satisfaction_Score as predictors. Perform model selection and assess variable importance.
+
+```{r}
+multi_model <- lm(Purchase_Amount ~ Browsing_Time + Number_of_Items + Satisfaction_Score, data = df)
+summary(multi_model)
+```
+
+
+```{r}
+lm.beta(multi_model)
+
+stepwise_model <- step(multi_model, direction = "both")
+summary(stepwise_model)
+```
+
+From the multiple regression model, we can infer that **Browsing_Time** alone is a weak predictor of **Purchase_Amount**. The **Number_of_Items** and **Satisfaction_Score** have stronger effects. Stepwise regression helps identify the most important variables.
