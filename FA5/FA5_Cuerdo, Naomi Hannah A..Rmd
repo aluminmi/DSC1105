@@ -1,0 +1,134 @@
+---
+title: "FA 5"
+author: "Cuerdo, Naomi Hannah A."
+date: "2025-04-26"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Poisson Regression with Store Sales Data
+
+```{r libraries, include=FALSE}
+
+library(ggplot2)
+library(tidyverse)
+```
+
+
+## Load and Explore the Data
+
+Loading the dataset:
+```{r data set, include=FALSE}
+storeSales <- read.csv("C:/Users/naomi/Downloads/store_sales_data.csv")
+
+```
+
+```{r structure and summary }
+glimpse(storeSales)
+summary(storeSales)
+head(storeSales)
+
+```
+#### Distribution of sales_count:
+
+```{r sales_count}
+ggplot(storeSales, aes(x= sales_count)) +
+  geom_histogram(binwidth = 5, fill = "purple", color = "black") +
+  labs(title = "Distribution of Sales Count", x = "Sales Count", y = "Frequency")
+```
+
+#### Frequency of each store_size:
+
+```{r store_size}
+ggplot(storeSales, aes(x= store_size)) +
+  geom_bar(fill = "lightgreen", color = "black") +
+  labs(title = "Frequency of Store Size", x = "Store Size", y = "Count")
+```
+
+#### Proportion of days with promo and holiday
+```{r promo and holiday}
+
+storeSales %>%
+  count(promo) %>%
+  mutate(proportion = n / sum(n))
+
+storeSales %>%
+  count(holiday) %>%
+  mutate(proportion = n / sum(n))
+
+```
+
+## Fit a Poisson Regression Model
+
+```{r Poisson Regression Model}
+
+poisson_model <- glm(
+  sales_count ~ day_of_week + promo + holiday + store_size,
+  family = poisson(link = "log"),
+  data = storeSales
+)
+
+summary(poisson_model)
+
+```
+Interpreting the effect of promotion to the store's sales:
+
+```{r promotion effect}
+exp(coef(poisson_model)["promo"])
+
+```
+As the promo increases, the number of sales also increases.
+
+Interpreting how store size affecs expected sales:
+
+```{r store size expected sales}
+exp(coef(poisson_model)[grep("store_size", names(coef(poisson_model)))])
+
+
+```
+With a value of **0.498**, A **medium store** has about 50% the expected sales of a large store, while a **small store with a value of 0.25** has the expected sales of a large store. 
+
+
+## Assess Model
+
+Checking for overdispersion:
+
+```{r deviance}
+deviance(poisson_model) / df.residual(poisson_model)
+
+```
+Since the deviance is close to 1, there is no significant overdispersion which means that the poisson model is appropriate.
+
+
+## Make Predictions
+
+Predicting sales on a **medium store on a monday** with a **promotion and a holiday** and a **large store on a sunday**
+
+```{r predict medium}
+new_data <- tibble(
+  day_of_week = c(1, 7),
+  promo = c(1, 0),
+  holiday = c(0, 1), 
+  store_size = c("medium", "large")
+)
+
+predicted_sales <- predict(poisson_model, newdata = new_data, type = "response")
+
+predicted_sales
+
+```
+
+From the prediction model, we can say that the medium store is expected to sell at about 16 items with a promo on a normal day, meanwhile the large store is expected to sell at about 21 items on a holiday without a promo. 
+
+From here, we can say that large stores can still outperform medium stores even without a promo. 
+
+
+## Reflection
+
+The Poisson regression model seems to fit the data well, with a deviance-to-degrees-of-freedom ratio close to 1.03, suggesting no large overdispersion. Among the predictors, store size had the most effect in sales, with small and medium stores showing lower expected sales compared to large stores. Promotions also positively influenced sales, but to a lesser extent, since large stores can still outperform small and medium stores even without a holiday.
+
+However, one limitation of this model is that it assumes that the relationship between the predictors and sales is consistent across all levels where in reality, external factors may affect sales such as seasonal trends, competitor actions, and economic factors, in which all of these were not captured in this model. Incorporating these factorrs might improve predictive models that can fit in a real-world setting. 
+
