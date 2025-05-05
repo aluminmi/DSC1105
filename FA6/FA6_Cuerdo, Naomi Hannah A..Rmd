@@ -1,0 +1,328 @@
+---
+title: "FA 6"
+author: "Cuerdo, Naomi Hannah A."
+date: "2025-05-04"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r libraries, include=FALSE}
+library(ggplot2)
+library(tidyverse)
+library(dplyr)
+library(readr)
+library(caret)
+library(nnet)
+library(glmnet)
+library(MLmetrics)
+
+```
+
+
+# Customer Segmentation in an E-Commerce Business
+
+## Introduction
+This analysis focused on building a multinomial logistic regression model to predict customer segment based on demographic and purchase behavior data.
+
+
+```{r dataset, include=FALSE}
+df <-read_csv("C:/Users/naomi/Downloads/customer_segmentation.csv")
+
+```
+
+#### Data Exploration
+```{r inspect}
+glimpse(df)
+colSums(is.na(df))
+
+```
+There are no missing values in the dataset, thus we can proceed with the visualization. 
+
+##### Age Distribution
+
+```{r visualization in age}
+ggplot(df, aes(x=Age)) +
+  geom_histogram(binwidth = 5, fill = "steelblue", color = "white") +
+  labs(title = "Distribution of Age", x = "Age", y = "Count")
+
+```
+
+From the plot above, it has be seen that highest number of customers are at around ages 40 years old.
+
+
+##### Distribution of Annual Income
+```{r annual income}
+ggplot(df, aes(x=`Annual Income (K$)`)) +
+  geom_histogram(binwidth = 5, fill = "darkgreen", color = "white") +
+  labs(title = "Distribution of Annual Income", x = "Annual Income", y = "Count")
+
+```
+
+
+##### Distribution of Average Spend per Visit
+
+```{r }
+ggplot(df, aes(x = `Average Spend per Visit ($)`)) +
+  geom_histogram(binwidth = 10, fill = "darkorange", color = "white") +
+  labs(title = "Distribution of Average Spend per Visit", x = "Average Spend ($)", y = "Count")
+```
+
+```{r variable distribution}
+
+ggplot(df, aes(x = `Customer Segment`, fill = `Customer Segment`)) +
+  geom_bar() +
+  labs(title = "Customer Segment Distribution", x = "Segment", y = "Count") +
+  theme_minimal()
+
+```
+
+
+#### Data Preprocessing
+
+##### Encoding gender to numeric
+```{r encode gender}
+df$Gender <- ifelse(df$Gender == "Male", 1, 0)
+
+```
+
+##### One-Hot Encoding for the product category
+```{r product category}
+df <- df%>%
+  mutate(`Product Category Purchased` = as.factor(`Product Category Purchased`)) %>%
+  tidyr::pivot_wider(
+    names_from = `Product Category Purchased`,
+    values_from = `Product Category Purchased`,
+    values_fn = length,
+    values_fill = 0
+  )
+```
+
+##### Scale Numeric Variables
+```{r scale age, annual income, average spend}
+df_scaled <- df %>%
+  mutate(
+    Age = scale(Age),
+    `Annual Income (K$)` = scale(`Annual Income (K$)`),
+    `Average Spend per Visit ($)` = scale(`Average Spend per Visit ($)`)
+  )
+
+```
+
+##### Convert Target Variable to Factor
+```{r segment to factor}
+df_scaled$`Customer Segment` <- as.factor(df_scaled$`Customer Segment`)
+
+```
+
+##### Split into Training and Test Sets
+```{r segment to factor 2}
+
+set.seed(123) 
+train_index <- createDataPartition(df_scaled$`Customer Segment`, p = 0.8, list = FALSE)
+
+train_data <- df_scaled[train_index, ]
+test_data  <- df_scaled[-train_index, ]
+
+```
+
+##### Model Building
+```{r mlrm}
+model <- multinom(`Customer Segment` ~ ., data = train_data)
+summary(model)
+
+```
+The multinomial logistic regression predicts customer segments using demographic and behavioral data. The fashion products strongly increase odds of being Premium or Regular, while books are strongly Females are  more likely to be a Premium shopper rather than a regular shopper. Meanwhile older customers are slightly more likely to be Premium. Annual Income has a negative effect, in which there is a need for dat scaling.
+
+
+Residual Deviance: 18, 497.86
+AIC: 18,541.86
+
+##### Tuning hyperparameters using cross-validation:
+
+```{r cross validation}
+y <- as.factor(train_data$`Customer Segment`)
+x <- model.matrix(`Customer Segment` ~ . - 1, data = train_data)
+
+# test matrices
+
+x_test <- model.matrix(`Customer Segment` ~ . - 1, data = test_data)
+y_test <- as.factor(test_data$`Customer Segment`)
+
+cv_model <- cv.glmnet(
+  x, y, 
+  family = "multinomial",
+  type.measure = "class",
+  alpha = 0,  # ridge regression (L2), set alpha = 1 for LASSO
+  nfolds = 5
+)
+
+# Plot cross-validation curve
+plot(cv_model)
+```
+
+
+```{r best lambda}
+# Best lambda
+best_lambda <- cv_model$lambda.min
+print(best_lambda)
+```
+
+```{r final fit model}
+final_model <- glmnet(
+  x, y,
+  family = "multinomial",
+  alpha = 0,
+  lambda = best_lambda
+)
+```
+
+
+#### Model Evaluation 
+```{r make predictions}
+predictions <- predict(final_model, newx = x_test, type = "class")
+
+```
+
+```{r evaluation}
+
+conf_mat <- confusionMatrix(factor(predictions), y_test)
+conf_mat
+
+
+```
+
+
+```{r accuracy, precision, F1-score, and log loss}
+
+accuracy <- conf_mat$overall["Accuracy"]
+precision <- conf_mat$byClass[, "Pos Pred Value"]
+recall <- conf_mat$byClass[, "Sensitivity"]
+f1_score <- 2 * (precision * recall) / (precision + recall)
+
+
+cat("Accuracy:", round(accuracy, 4), "\n")
+cat("Precision (per class):\n"); print(round(precision, 4))
+cat("Recall (per class):\n"); print(round(recall, 4))
+cat("F1-Score (per class):\n"); print(round(f1_score, 4))
+
+```
+Based from the numbers, The model struggles to distinguish customer segments clearly. Predictions are biased toward the most common class, and none of the groups are predicted reliably.
+
+
+##### Refinement 
+
+```{r refine 1 }
+df_scaled <- df_scaled %>%
+  mutate(
+    Income_Age_Interaction = scale(`Annual Income (K$)` * Age)
+  )
+set.seed(123)
+train_index <- createDataPartition(df_scaled$`Customer Segment`, p = 0.8, list = FALSE)
+train_data <- df_scaled[train_index, ]
+test_data <- df_scaled[-train_index, ]
+
+x_train <- model.matrix(`Customer Segment` ~ . -1, data = train_data)
+y_train <- as.factor(train_data$`Customer Segment`)
+x_test <- model.matrix(`Customer Segment` ~ . -1, data = test_data)
+y_test <- as.factor(test_data$`Customer Segment`)
+
+alphas <- seq(0, 1, by = 0.2)  # From Ridge (0) to LASSO (1)
+cv_results <- list()
+
+for (a in alphas) {
+  cat("Fitting model with alpha =", a, "\n")
+  cv_fit <- cv.glmnet(
+    x_train, y_train,
+    family = "multinomial",
+    type.measure = "class",
+    alpha = a,
+    nfolds = 5
+  )
+  cv_results[[paste0("alpha_", a)]] <- cv_fit
+}
+
+best_model <- NULL
+lowest_error <- Inf
+best_alpha <- NA
+
+for (a in names(cv_results)) {
+  err <- min(cv_results[[a]]$cvm)
+  if (err < lowest_error) {
+    lowest_error <- err
+    best_model <- cv_results[[a]]
+    best_alpha <- as.numeric(gsub("alpha_", "", a))
+  }
+}
+
+cat("Best alpha:", best_alpha, "\n")
+best_lambda <- best_model$lambda.min
+
+
+```
+```{r final model with best alpha and lambda}
+
+final_model <- glmnet(
+  x_train, y_train,
+  family = "multinomial",
+  lambda = best_lambda
+)
+
+```
+
+Evaluating with Cross-Validation:
+
+```{r evaluate with cross validation}
+
+cv_fit <- train(
+  x = x_train, y = y_train,
+  method = "glmnet",
+  family = "multinomial",
+  trControl = trainControl(method = "cv", number = 10),
+  tuneGrid = expand.grid(alpha = best_alpha, lambda = best_lambda)
+)
+print(cv_fit)
+
+```
+Based from the data, we have:
+
+Data: 8,427 samples, 12 predictors, and 3 classes: Budget Shopper, Premium Shopper, and Regular Shopper.
+
+Preprocessing: No pre-processing was applied.
+
+Resampling: 10-fold cross-validation was used.
+
+Hyperparameters: The tuning parameters were held constant at α = 0.6 (a mix leaning more toward LASSO) and λ = 0.006942871.
+
+Resampling Results:
+
+Accuracy: ~33.3%
+
+Kappa: ~ -0.002
+
+With this, an accuracy of 33.3% suggests that the model is only slightly better than random guessing.
+
+The negative Kappa value indicates that the model does not perform better than chance, showing almost no agreement between the predicted 
+
+##### Results and Discussion 
+
+This model was made to predict customer segments using demographic and behavioral variables. The dataset includes Age, Annual Income, Gender, Product Categpry Purchased, Average Spend per Visit, Number of Visits in Last 6 months, and Customer Segment.
+
+The target variable, Customer Segment, has three categories:
+
+1. Budget Shopper
+2. Regular Shopper
+3. Premium Shopper
+
+A multinomial logistic regression model with elastic net regularization was trained using 10-fold cross-validation. However, the model achieved a low accuracy of 33.3% and a Kappa of approximately 0, indicating performance close to random guessing.
+
+Feature coefficients suggest weak associations between predictors and customer segments. For example:
+
+Higher Fashion purchases slightly increase the likelihood of being a Premium or Regular Shopper.
+
+Books were negatively associated with Premium and Regular Shoppers.
+
+Gender, Age, and Income had small effects on classification
