@@ -1,0 +1,117 @@
+---
+title: "SA2 BONUS"
+author: "Ablian, Andrei Jon A., Cuerdo, Naomi Hannah A., Percia, Kyte Daiter M."
+date: "2025-05-20"
+output: githubSnt
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r libraries}
+library(tidyverse)
+library(ggplot2)
+
+```
+
+# PCA Analysis for New York Times Articles (TF - IDF)
+
+The dataset contains TF-IDF-normalized word frequencies for a collection of New York Times articles. Each row represents an article, and each column (except type) corresponds to the TF-IDF score of a specific word. The type column indicates the article's category (e.g., "art" or "music"). The data is suitable for text analysis and dimensionality reduction using techniques like Principal Component Analysis (PCA) to explore patterns and differences in word usage across article types.
+
+
+```{r dataset}
+df <- read.csv("C:\\Users\\naomi\\Downloads\\nyt_articles.csv")
+str(df)
+
+```
+The summary above show the variables and observation of the dataset. The dataset has 102 observations and 4,432 variables.
+
+We now then have to remove the non-numeric or irrelevant columns (assuming 'type is the label column') and zero-variance columns
+
+```{r remove}
+article_type <- df$type  
+df_features <- df %>% select(-type)
+
+
+df_features_numeric <- df_features %>% mutate(across(everything(), ~as.numeric(.)))
+
+
+df_features_numeric <- df_features_numeric[, colSums(!is.na(df_features_numeric)) > 0]
+
+
+nzv_cols <- sapply(df_features_numeric, function(col) var(col, na.rm = TRUE) > 0)
+df_features_numeric <- df_features_numeric[, nzv_cols]
+
+
+df_features_numeric <- na.omit(df_features_numeric)
+
+article_type <- article_type[as.numeric(rownames(df_features_numeric))]
+```
+
+
+Now, we are ready for the PCA analysis proper.
+```{r scaled PCA}
+
+pca_scaled <- prcomp(df_features_numeric, center = TRUE, scale. = TRUE)
+
+summary(pca_scaled)
+```
+
+The principal component analysis (PCA) was performed on a dataset with 102 observations and 4432 variables. The first principal component (PC1) has the highest standard deviation (10.03) but explains only about 2.27% of the total variance. Subsequent components explain progressively smaller proportions of variance, with the first 10 components cumulatively accounting for approximately 16.5% of the variance. The gradual increase in cumulative variance suggests that many components are needed to capture most of the data’s variability, indicating a complex, high-dimensional dataset.
+
+### Plots
+
+Plotting the Scaled PCA:
+```{r plot}
+
+df_pca_scaled <- as.data.frame(pca_scaled$x)
+df_pca_scaled$type <- article_type
+
+ggplot(df_pca_scaled, aes(PC1, PC2, color = type)) +
+  geom_point(size = 3, alpha = 0.7) +
+  labs(title = "PCA on Standardized TF-IDF", x = "PC1", y = "PC2") +
+  theme_minimal()
+
+```
+
+The scatter plot displays the first two principal components (PC1 and PC2) from the standardized TF-IDF matrix. Each point represents an article, colored by its article type. From the graph, the points clustered together (especially near the origin) are more similar based on their TF-IDF features.
+
+Points farther out (e.g., around PC1 = 40) are likely outliers or documents with unique term usage.
+
+
+Now we determine the top loadings for visualization:
+```{r top loadings}
+top_loadings <- function(rotation_matrix, pc = 1, n = 10) {
+  loadings <- rotation_matrix[, pc]
+  idx <- order(abs(loadings), decreasing = TRUE)[1:n]
+  tibble(word = names(loadings)[idx], loading = loadings[idx])
+}
+top_pc1 <- top_loadings(pca_scaled$rotation, pc = 1, n = 10)
+top_pc2 <- top_loadings(pca_scaled$rotation, pc = 2, n = 10)
+
+```
+
+Combining and plot vectors for a subset biplot to check the top loadings of the dataset:
+
+```{r biplot}
+
+biplot_data <- rbind(
+  top_pc1 %>% mutate(PC = "PC1"),
+  top_pc2 %>% mutate(PC = "PC2")
+)
+
+ggplot(biplot_data, aes(x = loading, y = word)) +
+  geom_col() +
+  facet_wrap(~PC, scales = "free") +
+  labs(title = "Top Loadings on PC1 and PC2", x = "Loading", y = "Word") +
+  theme_minimal()
+
+```
+The chart shows the top words influencing the first two principal components (PC1 and PC2) from a PCA on TF-IDF text data. PC1 is dominated by common words (e.g., "work", "that", "he"), likely reflecting general language usage. PC2 highlights more content-specific terms (e.g., "said", "viewer", "conceptual"), suggesting it captures thematic or topical variation across documents.
+
+### Results and Discussion
+
+From the results above, we can say that the standardized variables makes a difference when the variables have different scales of  variation, which is almost always the case in TF-IDF matrices. 
+Furthermore, it gives better separation by article type, as can be seein the PC1 and PC2 plot. Thus, we can say that **the standardized PCA is more useful.** It allows intepretable inspection via loadings, which are key words driving variance. 
+
